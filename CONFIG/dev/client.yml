@@ -1,0 +1,6 @@
+SSMReactAppBACKENDURL:
+  Type: AWS::SSM::Parameter
+  Properties:
+    Name: /react/client/${self:provider.stage}/REACT_APP_BACKEND_URL
+    Type: String
+    Value: "https://api-dev.leonardomedina.com.ec"

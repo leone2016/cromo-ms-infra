@@ -1,0 +1,167 @@
+service: infrastructure
+frameworkVersion: "3"
+provider:
+  name: aws
+  stage: ${env:MS_STAGE, 'dev'} # default to 'dev' if MS_STAGE is not set
+  role:
+    Fn::Sub:
+      - arn:aws:iam::${AWS::AccountId}:role/infrastructure-role-${self:provider.stage}
+      - AWS::AccountId: !Ref AWS::AccountId
+  environment:
+    AWS_NODEJS_CONNECTION_REUSE_ENABLED: "1"
+    NODE_OPTIONS: "--enable-source-maps --stack-trace-limit=1000"
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - s3:CreateBucket
+        - s3:ListBucket
+        - s3:GetBucketPolicy
+      Resource: "*"
+    - Effect: Allow
+      Action:
+        - s3:PutBucketPolicy
+      Resource: "*"
+custom:
+  tagEnv:
+    dev: TESTING
+    qa: TESTING
+    uat: TESTING
+    prod: PRODUCTION
+  dynamoTag:
+    - Key: ENVIRONMENT
+      Value: ${self:custom.tagEnv.${self:provider.stage}}
+    - Key: INTEGRATION
+      Value: COTIZAFACIL
+    - Key: COST
+      Value: BY TRANSACTION
+  lambdaBucket: cotizafacil-lambdas-${self:provider.stage}
+  userProfilePhotoBucket: cotizafacil-user-profile-photo-${self:provider.stage}
+  SNSNotificationCode: notification-service-${self:provider.stage}
+  SQSNotificationCode: notification-service-${self:provider.stage}
+  private_key: ${file(PEM/${self:provider.stage}/auth/private_key_base64.txt)}  # Lee el archivo y codifica a Base64
+  public_key: ${file(PEM/${self:provider.stage}/auth/public_key_base64.txt)}    # Lee el archivo y codifica a Base64
+resources:
+  Resources:
+    InfraestructureRole:
+      Type: AWS::IAM::Role
+      Properties:
+        RoleName: infrastructure-role-${self:provider.stage}
+        AssumeRolePolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Principal:
+                Service: lambda.amazonaws.com
+              Action: sts:AssumeRole
+        Policies:
+          - PolicyName: s3-access-policy
+            PolicyDocument:
+              Version: '2012-10-17'
+              Statement:
+                - Sid: PublicRead
+                  Effect: Allow
+                  Action:
+                    - s3:PutObject
+                    - s3:GetObject
+                    - s3:PutBucketPolicy
+                    - s3:GetBucketPolicy
+                  Resource:
+                    - arn:aws:s3:::${self:custom.userProfilePhotoBucket}/*
+    UserTable: ${file(DB/${self:provider.stage}/User.yml):User}
+    LogsMailTable: ${file(DB/${self:provider.stage}/LogsMail.yml):LogsMail}
+    CatalogueTable: ${file(DB/${self:provider.stage}/Catalogue.yml):Catalogue}
+    ResourcesAwsTable: ${file(DB/${self:provider.stage}/ResourcesAws.yml):ResourcesAws}
+    RoleTable: ${file(DB/${self:provider.stage}/Role.yml):Role}
+    BucketDeployLambdas:
+      Type: AWS::S3::Bucket
+      DeletionPolicy: Retain
+      Properties:
+        BucketName: ${self:custom.lambdaBucket}
+    BucketUserProfilePhoto:
+      Type: AWS::S3::Bucket
+      Properties:
+        BucketName: ${self:custom.userProfilePhotoBucket}
+    SNSNotificationCode:
+      Type: AWS::SNS::Topic
+      Properties:
+        TopicName: ${self:custom.SNSNotificationCode}
+    SQSNotificationCode:
+      Type: AWS::SQS::Queue
+      Properties:
+        MessageRetentionPeriod: 86400
+        QueueName: ${self:custom.SQSNotificationCode}
+        VisibilityTimeout: 20
+    ## SSM ZONE ====================================================
+    ## SSM ZONE ====================================================
+    ## SSM ZONE ====================================================
+    SSMBucketDeployLambdas:
+      Type: AWS::SSM::Parameter
+      Properties:
+        Name: /lambdas-${self:provider.stage}
+        Type: String
+        Value: !Ref BucketDeployLambdas
+    SSMNotificationCodeArn:
+      Type: AWS::SSM::Parameter
+      Properties:
+        Name: /notification-service/${self:provider.stage}/SQS_NOTIFICATION_ARN
+        Type: String
+        Value: !GetAtt SQSNotificationCode.Arn
+    SSMNotificationCodeUrl:
+      Type: AWS::SSM::Parameter
+      Properties:
+        Name: /notification-service/${self:provider.stage}/SQS_NOTIFICATION_URL
+        Type: String
+        Value: !Ref SQSNotificationCode
+    SSMSNSNotificationCodeArn:
+      Type: AWS::SSM::Parameter
+#      Description: SNS for notification service and for sending validation registration code
+      Properties:
+        Name: /notification-service/${self:provider.stage}/SNS_NOTIFICATION_ARN
+        Type: String
+        Value: !Ref SNSNotificationCode
+    PrivateKeyParameter:
+      Type: AWS::SSM::Parameter
+      Properties:
+        Name: /oauth/${self:provider.stage}/PRIVATE_KEY
+        Description: Private key for JWT RS256
+        Type: String
+        Value: ${self:custom.private_key}
+    PublicKeyParameter:
+      Type: AWS::SSM::Parameter
+      Properties:
+        Name: /oauth/${self:provider.stage}/PUBLIC_KEY
+        Description: Public key for JWT RS256
+        Type: String
+        Value: ${self:custom.public_key}
+    JwtExpirationTimeParameter:
+      Type: AWS::SSM::Parameter
+      Properties:
+        Name: /oauth/${self:provider.stage}/EXP_TIME
+        Description: Token expiration time
+        Type: String
+        Value: "15m"
+    LambdaAuthParameter:
+      Type: AWS::SSM::Parameter
+      Properties:
+        Name: /oauth/${self:provider.stage}
+        Description: lambda made for authorize execute other lambdas
+        Type: String
+        Value: !Sub "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:oauth-${self:provider.stage}-oauth"
+    SSMCertificateName: ${file(CONFIG/${self:provider.stage}/ssm.yml):SSMCertificateName}
+    SSMDomainApiGateway: ${file(CONFIG/${self:provider.stage}/ssm.yml):SSMDomainApiGateway}
+    SSMExecuteApi:
+      Type: AWS::SSM::Parameter
+      Properties:
+        Name:  /oauth/${self:provider.stage}/EXECUTE_API
+        Description: arn basic to execute apis inside ms-auth
+        Type: String
+        Value: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:"
+  Outputs:
+    MailQueueArn:
+      Value: !GetAtt SQSNotificationCode.Arn
+      Export:
+        Name: MailQueueARN-${self:provider.stage}
+    MailQueueUrl:
+      Value: !Ref SQSNotificationCode
+      Export:
+        Name: MailQueueURL-${self:provider.stage}

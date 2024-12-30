@@ -1,0 +1,25 @@
+UserKyc:
+        Type: AWS::DynamoDB::Table
+        Properties:
+                TableName: ${self:provider.stage}-user_kyc
+                BillingMode: PAY_PER_REQUEST
+                AttributeDefinitions:
+                        - AttributeName: id
+                          AttributeType: S
+                        - AttributeName: userId # match this
+                          AttributeType: S
+                KeySchema:
+                        - AttributeName: id
+                          KeyType: HASH
+                GlobalSecondaryIndexes:
+                  - IndexName: userId-index
+                    KeySchema:
+                      - AttributeName: userId # with this
+                        KeyType: HASH
+                    Projection:
+                      ProjectionType: ALL
+                StreamSpecification:
+                        StreamViewType: NEW_AND_OLD_IMAGES
+                PointInTimeRecoverySpecification:
+                  PointInTimeRecoveryEnabled: true
+                Tags: ${self:custom.dynamoTag}

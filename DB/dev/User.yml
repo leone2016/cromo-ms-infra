@@ -1,0 +1,57 @@
+User:
+        Type: AWS::DynamoDB::Table
+        Properties:
+                TableName: ${self:provider.stage}-user
+                BillingMode: PAY_PER_REQUEST
+                AttributeDefinitions:
+                        - AttributeName: id
+                          AttributeType: S
+                        - AttributeName: email # match this
+                          AttributeType: S
+                        - AttributeName: residenceCountry
+                          AttributeType: S
+                        - AttributeName: birthCountry
+                          AttributeType: S
+                        - AttributeName: phoneNumber
+                          AttributeType: S
+                        - AttributeName: status_
+                          AttributeType: N
+                KeySchema:
+                        - AttributeName: id
+                          KeyType: HASH
+                GlobalSecondaryIndexes:
+                        - IndexName: emailGSI
+                          KeySchema:
+                                  - AttributeName: email # with this
+                                    KeyType: HASH
+                          Projection:
+                                  ProjectionType: ALL
+                        - IndexName: residenceCountryGSI
+                          KeySchema:
+                                  - AttributeName: residenceCountry
+                                    KeyType: HASH
+                          Projection:
+                                  ProjectionType: ALL
+                        - IndexName: birthCountryGSI
+                          KeySchema:
+                                  - AttributeName: birthCountry
+                                    KeyType: HASH
+                          Projection:
+                                  ProjectionType: ALL
+                        - IndexName: phoneNumberGSI
+                          KeySchema:
+                                  - AttributeName: phoneNumber
+                                    KeyType: HASH
+                          Projection:
+                                  ProjectionType: ALL
+                        - IndexName: status_GSI
+                          KeySchema:
+                                  - AttributeName: status_
+                                    KeyType: HASH
+                          Projection:
+                            ProjectionType: ALL
+                StreamSpecification:
+                        StreamViewType: NEW_AND_OLD_IMAGES
+                PointInTimeRecoverySpecification:
+                  PointInTimeRecoveryEnabled: true
+                Tags: ${self:custom.dynamoTag}

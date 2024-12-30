@@ -1,0 +1,6 @@
+SSMMailBrevo:
+  Type: AWS::SSM::Parameter
+  Properties:
+    Name: /todo/${self:provider.stage}/TODO
+    Type: String
+    Value: "TODO"

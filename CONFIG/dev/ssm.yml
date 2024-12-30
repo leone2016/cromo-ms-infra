@@ -1,0 +1,18 @@
+SSMCertificateName:
+  Type: AWS::SSM::Parameter
+  Properties:
+    Name: certificate-name-prod
+    Description: certificate name
+    Type: String
+    Value: "*.leonardomedina.com.ec"
+SSMDomainApiGateway:
+  Type: AWS::SSM::Parameter
+  Properties:
+    Name: domain-api-gateway-${self:provider.stage}
+    Description: domain api gateway
+    Type: String
+    Value: "api-cromo-dev.leonardomedina.com.ec"
+
+
+
+

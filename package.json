@@ -1,0 +1,15 @@
+{
+  "name": "cromo-ms-infra",
+  "version": "1.0.0",
+  "description": "### You must know",
+  "main": "index.js",
+  "scripts": {
+    "deploy:dev": "./deploy.sh dev",
+    "deploy:prod": "./deploy.sh prod"
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "serverless-plugin-ifelse": "^1.0.7"
+  }
+}

@@ -1,0 +1,21 @@
+Catalogue:
+        Type: AWS::DynamoDB::Table
+        Properties:
+                TableName: ${self:provider.stage}-catalogue
+                BillingMode: PAY_PER_REQUEST
+                AttributeDefinitions:
+                        - AttributeName: id
+                          AttributeType: S
+                        - AttributeName: category
+                          AttributeType: S
+                KeySchema:
+                        - AttributeName: id
+                          KeyType: HASH
+                        - AttributeName: category
+                          KeyType: RANGE
+                StreamSpecification:
+                        StreamViewType: NEW_AND_OLD_IMAGES
+                PointInTimeRecoverySpecification:
+                  PointInTimeRecoveryEnabled: true
+                Tags: ${self:custom.dynamoTag}
+

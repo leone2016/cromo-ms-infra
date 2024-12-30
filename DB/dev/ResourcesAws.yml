@@ -1,0 +1,17 @@
+ResourcesAws:
+        Type: AWS::DynamoDB::Table
+        Properties:
+                TableName: ${self:provider.stage}-resources-aws
+                BillingMode: PAY_PER_REQUEST
+                AttributeDefinitions:
+                        - AttributeName: id
+                          AttributeType: S
+                KeySchema:
+                        - AttributeName: id
+                          KeyType: HASH
+                StreamSpecification:
+                        StreamViewType: NEW_AND_OLD_IMAGES
+                PointInTimeRecoverySpecification:
+                  PointInTimeRecoveryEnabled: true
+                Tags: ${self:custom.dynamoTag}
+
